@@ -541,15 +541,15 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines and our [
 
 ## License
 
-This project is licensed under the Apache License 2.0 — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ## Contact
 
 For questions, suggestions, or support:
 
-- **GitHub Issues**: [Create an issue](https://github.com/<YOUR_ORG>/sonatypeiq-mcp/issues)
-- **Discussions**: [Start a discussion](https://github.com/<YOUR_ORG>/sonatypeiq-mcp/discussions)
-- **Email**: open-source@flowgent.com
+- **GitHub Issues**: [Create an issue](../../sonatypeiq-mcp/issues)
+- **Discussions**: [Start a discussion](../../sonatypeiq-mcp/discussions)
+- **Email**: <jameswong1376@gmail.com>
 
 ## Acknowledgments
 
