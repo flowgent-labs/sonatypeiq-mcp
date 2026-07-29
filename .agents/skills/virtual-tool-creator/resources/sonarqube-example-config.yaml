@@ -1,11 +1,56 @@
-# Environment variables with MCP__ prefix override these values.
-# e.g. MCP__AUTH__BACKEND__OIDC__CLIENT_ID overrides auth.backend.oidc.client_id
+# ---- Frontend / Backend ----
+# frontend = inbound: validates bearer tokens presented by MCP clients (AI agents).
+# backend  = outbound: upstream API endpoints the server calls, keyed by name.
+# The two are decoupled — the inbound token is never reused outbound.
 
-# ---- Upstream API endpoint ----
+# ---- Frontend (inbound auth) ----
+server:
+  auth:
+    # Standard OAuth 2.1 / OIDC JWT bearer validation (Resource Server role, RFC 9728).
+    # Only enforced on the http transport; stdio has no network boundary.
+    oidc:
+      enabled: false
+      issuer: ""            # e.g. https://idp.example.com/realms/myrealm
+      jwks_uri: ""          # optional override (auto-discovered from issuer if empty)
+      audience: ""          # expected JWT "aud" claim; also published as the RFC 9728 protected-resource identifier
+      # When true, validated frontend JWT claims (sub, email) are forwarded upstream
+      # as X-MCP-Client-Token-Sub and X-MCP-Client-Token-Email headers.
+      enable_client_token_claim_forward: true
+      # Additional JWT claims to forward as X-MCP-Client-Token-<Header-Name> headers.
+      # e.g. ["given_name", "family_name", "preferred_username"]
+      # additional_client_token_claim_forward: []
+
+# ---- Backend (outbound upstream) ----
 upstream:
-  endpoint: ""               # upstream API base URL (e.g. https://api.example.com)
-  # When true, the MCP session ID is forwarded as X-MCP-Session-ID header.
-  enable_mcp_session_forward: true
+  default:
+    endpoint: ""               # primary upstream API base URL (e.g. https://api.example.com)
+    # When true, the MCP session ID is forwarded as X-MCP-Session-ID header.
+    enable_mcp_session_forward: true
+    auth:
+      # OIDC client credentials flow (machine-to-machine)
+      oidc:
+        enabled: false
+        issuer: ""            # e.g. https://keycloak.example.com/realms/myrealm
+        client_id: ""
+        client_secret: ""
+        scopes: "openid"       # space-separated scope list
+        token_url: ""          # optional override (auto-discovered from issuer if empty)
+
+      # Static credentials for legacy / simple APIs
+      static:
+        web_token: ""       # static Bearer token
+        web_token_file: ""   # path to file containing bearer token (K8s secrets)
+        cookie_token: ""        # static cookie (e.g. JSESSIONID for legacy systems)
+        cookie_token_file: ""   # path to file containing cookie token (K8s secrets)
+
+  # Additional named backends referenced by http pipeline steps.
+  # sonarqube:
+  #   endpoint: https://sonarqube.example.com
+  #   enable_mcp_session_forward: true
+  #   auth:
+  #     static:
+  #       web_token: ""       # static Bearer token for this upstream
+  #       cookie_token: ""    # static cookie token for this upstream
 
 # ---- Runtime settings ----
 runtime:
@@ -33,44 +78,6 @@ mgmt:
     histogram_boundaries:
       task: [0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 30, 60, 120]
     labels: {}                 # static labels added to every metric
-
-# ---- Authentication ----
-# frontend = inbound: validates bearer tokens presented by MCP clients (AI agents).
-# backend  = outbound: credentials the server uses to call upstream APIs.
-# The two are independent — the inbound token is never reused outbound
-# (see MCP Authorization spec: Token Passthrough Prohibition).
-auth:
-  frontend:
-    # Standard OAuth 2.1 / OIDC JWT bearer validation (Resource Server role, RFC 9728).
-    # Only enforced on the http transport; stdio has no network boundary.
-    oidc:
-      enabled: false
-      issuer: ""            # e.g. https://idp.example.com/realms/myrealm
-      jwks_uri: ""          # optional override (auto-discovered from issuer if empty)
-      audience: ""          # expected JWT "aud" claim; also published as the RFC 9728 protected-resource identifier
-      # When true, validated frontend JWT claims (sub, email) are forwarded upstream
-      # as X-MCP-Client-Token-Sub and X-MCP-Client-Token-Email headers.
-      enable_client_token_claim_forward: true
-      # Additional JWT claims to forward as X-MCP-Client-Token-<Header-Name> headers.
-      # e.g. ["given_name", "family_name", "preferred_username"]
-      # additional_client_token_claim_forward: []
-
-  backend:
-    # OIDC client credentials flow (machine-to-machine)
-    oidc:
-      enabled: false
-      issuer: ""            # e.g. https://keycloak.example.com/realms/myrealm
-      client_id: ""
-      client_secret: ""
-      scopes: "openid"       # space-separated scope list
-      token_url: ""          # optional override (auto-discovered from issuer if empty)
-
-    # Static credentials for legacy / simple APIs
-    static:
-      bearer_token: ""       # static Bearer token
-      bearer_token_file: ""   # path to file containing bearer token (K8s secrets)
-      cookie_token: ""        # static cookie (e.g. JSESSIONID for legacy systems)
-      cookie_token_file: ""   # path to file containing cookie token (K8s secrets)
 
 # ---- Native MCP Tools ----
 nativeTools:

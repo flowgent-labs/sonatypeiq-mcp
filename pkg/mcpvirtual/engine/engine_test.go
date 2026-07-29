@@ -57,7 +57,7 @@ func TestEngine_BuildTools(t *testing.T) {
 		},
 	}
 
-	engine, err := NewFromConfig(cfg, reg)
+	engine, err := NewFromConfig(cfg, reg, nil)
 	if err != nil {
 		t.Fatalf("NewFromConfig failed: %v", err)
 	}
@@ -148,7 +148,7 @@ func TestEngine_ApplyDefaults(t *testing.T) {
 		},
 	}
 
-	engine, err := NewFromConfig(cfg, reg)
+	engine, err := NewFromConfig(cfg, reg, nil)
 	if err != nil {
 		t.Fatalf("NewFromConfig failed: %v", err)
 	}

@@ -47,7 +47,7 @@ func TestUpdateSourceControlHandler(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		t.Setenv("MCP__UPSTREAM__ENDPOINT", ts.URL)
+		t.Setenv("MCP__UPSTREAM__DEFAULT__ENDPOINT", ts.URL)
 		mcputils.LoadConfig("sonatypeiq-mcp")
 
 		req := mcp.CallToolRequest{
@@ -73,7 +73,7 @@ func TestUpdateSourceControlHandler(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		t.Setenv("MCP__UPSTREAM__ENDPOINT", ts.URL)
+		t.Setenv("MCP__UPSTREAM__DEFAULT__ENDPOINT", ts.URL)
 		mcputils.LoadConfig("sonatypeiq-mcp")
 
 		req := mcp.CallToolRequest{
@@ -97,7 +97,7 @@ func TestUpdateSourceControlHandler(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		t.Setenv("MCP__UPSTREAM__ENDPOINT", ts.URL)
+		t.Setenv("MCP__UPSTREAM__DEFAULT__ENDPOINT", ts.URL)
 		mcputils.LoadConfig("sonatypeiq-mcp")
 
 		req := mcp.CallToolRequest{

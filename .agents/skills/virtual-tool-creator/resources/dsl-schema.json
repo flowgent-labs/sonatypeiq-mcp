@@ -1,62 +1,5 @@
 {
   "$defs": {
-    "AuthConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "backend": {
-          "$ref": "#/$defs/BackendAuthConfig"
-        },
-        "frontend": {
-          "$ref": "#/$defs/FrontendAuthConfig"
-        }
-      },
-      "type": "object"
-    },
-    "BackendAuthConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "oidc": {
-          "$ref": "#/$defs/BackendOIDCConfig"
-        },
-        "static": {
-          "$ref": "#/$defs/StaticAuthConfig"
-        }
-      },
-      "type": "object"
-    },
-    "BackendOIDCConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "client_id": {
-          "type": "string"
-        },
-        "client_secret": {
-          "type": "string"
-        },
-        "enabled": {
-          "type": "boolean"
-        },
-        "grant_type": {
-          "type": "string"
-        },
-        "issuer": {
-          "type": "string"
-        },
-        "password": {
-          "type": "string"
-        },
-        "scopes": {
-          "type": "string"
-        },
-        "token_url": {
-          "type": "string"
-        },
-        "username": {
-          "type": "string"
-        }
-      },
-      "type": "object"
-    },
     "CallSpec": {
       "additionalProperties": false,
       "properties": {
@@ -80,20 +23,23 @@
     "Config": {
       "additionalProperties": false,
       "properties": {
-        "auth": {
-          "$ref": "#/$defs/AuthConfig"
-        },
         "mgmt": {
           "$ref": "#/$defs/MgmtConfig"
         },
         "nativeTools": {
-          "$ref": "#/$defs/ToolsConfig"
+          "$ref": "#/$defs/NativeToolsConfig"
         },
         "runtime": {
           "$ref": "#/$defs/RuntimeConfig"
         },
+        "server": {
+          "$ref": "#/$defs/ServerConfig"
+        },
         "upstream": {
-          "$ref": "#/$defs/UpstreamConfig"
+          "additionalProperties": {
+            "$ref": "#/$defs/UpstreamEntryConfig"
+          },
+          "type": "object"
         }
       },
       "type": "object"
@@ -145,40 +91,36 @@
       ],
       "type": "object"
     },
-    "FrontendAuthConfig": {
+    "HTTPSpec": {
       "additionalProperties": false,
       "properties": {
-        "oidc": {
-          "$ref": "#/$defs/FrontendOIDCConfig"
+        "body": {},
+        "upstream": {
+          "type": "string"
+        },
+        "headers": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "method": {
+          "type": "string"
+        },
+        "parse": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "query": {
+          "additionalProperties": {},
+          "type": "object"
         }
       },
-      "type": "object"
-    },
-    "FrontendOIDCConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "additional_client_token_claim_forward": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "audience": {
-          "type": "string"
-        },
-        "enable_client_token_claim_forward": {
-          "type": "boolean"
-        },
-        "enabled": {
-          "type": "boolean"
-        },
-        "issuer": {
-          "type": "string"
-        },
-        "jwks_uri": {
-          "type": "string"
-        }
-      },
+      "required": [
+        "upstream",
+        "method",
+        "path"
+      ],
       "type": "object"
     },
     "JQSpec": {
@@ -250,6 +192,36 @@
         },
         "pprof": {
           "$ref": "#/$defs/PprofConfig"
+        }
+      },
+      "type": "object"
+    },
+    "NativeToolsConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "expose": {
+          "$ref": "#/$defs/NativeToolsExposeConfig"
+        }
+      },
+      "type": "object"
+    },
+    "NativeToolsExposeConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "excludes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "includes": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "register_all_tools_by_default": {
+          "type": "boolean"
         }
       },
       "type": "object"
@@ -330,19 +302,67 @@
       },
       "type": "object"
     },
+    "ServerAuthConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "oidc": {
+          "$ref": "#/$defs/ServerOIDCConfig"
+        }
+      },
+      "type": "object"
+    },
+    "ServerConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "auth": {
+          "$ref": "#/$defs/ServerAuthConfig"
+        },
+        "max_parallel_requests": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "ServerOIDCConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "additional_client_token_claim_forward": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "audience": {
+          "type": "string"
+        },
+        "enable_client_token_claim_forward": {
+          "type": "boolean"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "issuer": {
+          "type": "string"
+        },
+        "jwks_uri": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "StaticAuthConfig": {
       "additionalProperties": false,
       "properties": {
-        "bearer_token": {
-          "type": "string"
-        },
-        "bearer_token_file": {
-          "type": "string"
-        },
         "cookie_token": {
           "type": "string"
         },
         "cookie_token_file": {
+          "type": "string"
+        },
+        "web_token": {
+          "type": "string"
+        },
+        "web_token_file": {
           "type": "string"
         }
       },
@@ -363,6 +383,22 @@
             "properties": {
               "spec": {
                 "$ref": "#/$defs/CallSpec"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "http"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "spec": {
+                "$ref": "#/$defs/HTTPSpec"
               }
             }
           }
@@ -439,6 +475,7 @@
         "kind": {
           "enum": [
             "call",
+            "http",
             "jq",
             "foreach",
             "return",
@@ -458,58 +495,61 @@
       ],
       "type": "object"
     },
-    "ToolsConfig": {
+    "UpstreamAuthConfig": {
       "additionalProperties": false,
       "properties": {
-        "expose": {
-          "$ref": "#/$defs/ToolsExposeConfig"
+        "oidc": {
+          "$ref": "#/$defs/UpstreamOIDCConfig"
+        },
+        "static": {
+          "$ref": "#/$defs/StaticAuthConfig"
         }
       },
       "type": "object"
     },
-    "ToolsExposeConfig": {
+    "UpstreamEntryConfig": {
       "additionalProperties": false,
       "properties": {
-        "excludes": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
+        "auth": {
+          "$ref": "#/$defs/UpstreamAuthConfig"
         },
-        "includes": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "register_all_tools_by_default": {
-          "type": "boolean"
-        }
-      },
-      "type": "object"
-    },
-    "UpstreamConfig": {
-      "additionalProperties": false,
-      "properties": {
         "enable_mcp_session_forward": {
           "type": "boolean"
         },
         "endpoint": {
           "type": "string"
-        },
-        "tools": {
-          "items": {
-            "$ref": "#/$defs/UpstreamToolConfig"
-          },
-          "type": "array"
         }
       },
       "type": "object"
     },
-    "UpstreamToolConfig": {
+    "UpstreamOIDCConfig": {
       "additionalProperties": false,
       "properties": {
-        "name": {
+        "client_id": {
+          "type": "string"
+        },
+        "client_secret": {
+          "type": "string"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "grant_type": {
+          "type": "string"
+        },
+        "issuer": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "scopes": {
+          "type": "string"
+        },
+        "token_url": {
+          "type": "string"
+        },
+        "username": {
           "type": "string"
         }
       },
@@ -555,20 +595,23 @@
   "additionalProperties": true,
   "description": "Schema for mcpfather MCP server configuration ($HOME/.\u003cbinary\u003e/config.yaml). Generated from Go structs in mcpconfig + mcpvirtual/config + mcpvirtual/pipeline.",
   "properties": {
-    "auth": {
-      "$ref": "#/$defs/AuthConfig"
-    },
     "mgmt": {
       "$ref": "#/$defs/MgmtConfig"
     },
     "nativeTools": {
-      "$ref": "#/$defs/ToolsConfig"
+      "$ref": "#/$defs/NativeToolsConfig"
     },
     "runtime": {
       "$ref": "#/$defs/RuntimeConfig"
     },
+    "server": {
+      "$ref": "#/$defs/ServerConfig"
+    },
     "upstream": {
-      "$ref": "#/$defs/UpstreamConfig"
+      "additionalProperties": {
+        "$ref": "#/$defs/UpstreamEntryConfig"
+      },
+      "type": "object"
     },
     "virtualTools": {
       "items": {

@@ -25,18 +25,18 @@ make build-with-otel-http   # OTLP HTTP/protobuf exporter
 
 ```sh
 # Configure your upstream API
-export MCP__UPSTREAM__ENDPOINT=https://api.example.com
-export MCP__AUTH__BACKEND__STATIC__BEARER_TOKEN=your-token
+export MCP__UPSTREAM__DEFAULT__ENDPOINT=https://api.example.com
+export MCP__UPSTREAM__DEFAULT__AUTH__STATIC__WEB_TOKEN=your-token
 
 ./bin/sonatypeiq-mcp --transport http --port 8080 &
 ```
 
-- Inspection MCP frontend Authentication (OAuth2.1).
+- Inspection MCP Server Authentication (OAuth2.1).
 
 ```bash
-export MCP__AUTH__FRONTEND__OIDC__ENABLED=true
-export MCP__AUTH__FRONTEND__OIDC__ISSUER="https://keycloak.example.com/realms/master"
-export MCP__AUTH__FRONTEND__OIDC__AUDIENCE="sonatypeiq-mcp"
+export MCP__SERVER__AUTH__OIDC__ENABLED=true
+export MCP__SERVER__AUTH__OIDC__ISSUER="https://keycloak.example.com/realms/master"
+export MCP__SERVER__AUTH__OIDC__AUDIENCE="sonatypeiq-mcp"
 ./bin/sonatypeiq-mcp -v 10 --transport http --port 8080
 
 # Obtain the OAuth2.1 metadata.
@@ -69,71 +69,71 @@ Auth is split into two independent layers — neither shares credentials with th
 
 | Layer | Config YAML path | Env var prefix | Role |
 |---|---|---|---|
-| **Frontend** | `auth.frontend.oidc` | `MCP__AUTH__FRONTEND__OIDC__*` | Validates AI agent bearer tokens (inbound) |
-| **Backend OIDC** | `auth.backend.oidc` | `MCP__AUTH__BACKEND__OIDC__*` | Server's own OIDC client_credentials for upstream APIs |
-| **Backend Static** | `auth.backend.static` | `MCP__AUTH__BACKEND__STATIC__*` | Server's own static token/cookie for upstream APIs |
+| **Server** | `server.auth.oidc` | `MCP__SERVER__AUTH__OIDC__*` | Validates AI agent bearer tokens (inbound) |
+| **Upstream OIDC** | `upstream.default.auth.oidc` | `MCP__UPSTREAM__DEFAULT__AUTH__OIDC__*` | Server's own OIDC client_credentials for upstream APIs |
+| **Upstream Static** | `upstream.default.auth.static` | `MCP__UPSTREAM__DEFAULT__AUTH__STATIC__*` | Server's own static token/cookie for upstream APIs |
 
-**Frontend (inbound)** — validates bearer tokens presented by AI agents (MCP clients).
+**Server (inbound)** — validates bearer tokens presented by AI agents (MCP clients).
 Only applies to `--transport http`; stdio has no network boundary. Standard OIDC JWT
 bearer validation per RFC 9728 / MCP Authorization spec.
 
-**Backend (outbound)** — credentials the MCP server uses to call upstream APIs.
+**Upstream (outbound)** — credentials the MCP server uses to call upstream APIs.
 Token priority (first available wins):
 
-1. **OIDC** client_credentials grant (`auth.backend.oidc.*`)
-2. **Static** bearer token (`auth.backend.static.bearer_token`)
+1. **OIDC** client_credentials grant (`upstream.default.auth.oidc.*`)
+2. **Static** web token (`upstream.default.auth.static.web_token`)
 
 The AI agent's inbound token is **never** forwarded upstream (MCP spec: Token Passthrough Prohibition).
-Cookie-based auth is also available via `auth.backend.static.cookie_token`.
+Cookie-based auth is also available via `upstream.default.auth.static.cookie_token`.
 
 ## Configuration
 
 Create `~/.sonatypeiq-mcp/config.yaml` (run `--print-default-config` for a full template):
 
 ```yaml
-upstream:
-  endpoint: ""               # upstream API base URL (e.g. https://api.example.com)
-  # When true, the MCP session ID is forwarded as X-MCP-Session-ID header.
-  enable_mcp_session_forward: true
-
-runtime:
-  download_dir: ""
-  log_authorization: false
-
-# ---- Authentication ----
-# frontend = inbound: validates bearer tokens presented by MCP clients (AI agents).
-# backend  = outbound: credentials the server uses to call upstream APIs.
-# The two are independent — the inbound token is never reused outbound
-# (see MCP Authorization spec: Token Passthrough Prohibition).
-auth:
-  frontend:
-    # Standard OAuth 2.1 / OIDC JWT bearer validation (Resource Server role, RFC 9728).
-    # Only enforced on the http transport; stdio has no network boundary.
+# ---- Server (inbound) ----
+# Validates bearer tokens presented by MCP clients (AI agents).
+# Resource Server role per RFC 9728 / MCP Authorization spec.
+# Only enforced on the http transport; stdio has no network boundary.
+server:
+  auth:
     oidc:
       enabled: false
       issuer: ""            # e.g. https://idp.example.com/realms/myrealm
       jwks_uri: ""          # optional override (auto-discovered from issuer if empty)
       audience: ""          # expected JWT "aud" claim; also published as the RFC 9728 protected-resource identifier
-      # When true, validated frontend JWT claims (sub, email) are forwarded upstream
+      # When true, validated JWT claims (sub, email) are forwarded upstream
       # as X-MCP-Client-Token-Sub and X-MCP-Client-Token-Email headers.
       enable_client_token_claim_forward: true
       # Additional JWT claims to forward as X-MCP-Client-Token-<Header-Name> headers.
       # e.g. ["given_name", "family_name", "preferred_username"]
       # additional_client_token_claim_forward: []
+  max_parallel_requests: 100
 
-  # Outbound: credentials the server uses to call upstream APIs.
-  backend:
-    oidc:
-      enabled: true
-      issuer: https://idp.example.com/realms/myrealm
-      client_id: my-client
-      client_secret: "${MCP__AUTH__BACKEND__OIDC__CLIENT_SECRET}"
-      scopes: openid
-      # token_url: ""   # auto-discovered from issuer /.well-known
+# ---- Upstream (outbound) ----
+# Credentials the server uses to call upstream APIs.
+# The two auth layers are independent — the inbound token is never reused outbound
+# (see MCP Authorization spec: Token Passthrough Prohibition).
+upstream:
+  default:
+    endpoint: ""               # upstream API base URL (e.g. https://api.example.com)
+    enable_mcp_session_forward: true
+    auth:
+      oidc:
+        enabled: true
+        issuer: https://idp.example.com/realms/myrealm
+        client_id: my-client
+        client_secret: "${MCP__UPSTREAM__DEFAULT__AUTH__OIDC__CLIENT_SECRET}"
+        scopes: openid
+        # token_url: ""   # auto-discovered from issuer /.well-known
 
-    # Static credentials for legacy / simple APIs
-    static:
-      bearer_token: "${MCP__AUTH__BACKEND__STATIC__BEARER_TOKEN}"   # or set cookie_token
+      # Static credentials for legacy / simple APIs
+      static:
+        web_token: "${MCP__UPSTREAM__DEFAULT__AUTH__STATIC__WEB_TOKEN}"   # or set cookie_token
+
+runtime:
+  download_dir: ""
+  log_authorization: false
 
 nativeTools:
   expose:
@@ -142,7 +142,7 @@ nativeTools:
     # excludes: [Tool3]                   # hide noisy tools
 ```
 
-All values can be set via `MCP__`-prefixed environment variables (e.g. `MCP__AUTH__BACKEND__OIDC__CLIENT_ID`).
+All values can be set via `MCP__`-prefixed environment variables (e.g. `MCP__UPSTREAM__DEFAULT__AUTH__OIDC__CLIENT_ID`).
 
 ## Management — Metrics, Tracing, Pprof
 
@@ -238,9 +238,9 @@ Pipeline kinds: `call`, `jq`, `foreach`, `emit`, `return`.
       "command": ["bash", "-c", "/path/to/sonatypeiq-mcp"],
       "args": ["--transport", "stdio"],
       "env": {
-        "MCP__UPSTREAM__ENDPOINT": "https://api.example.com",
-        "MCP__AUTH__BACKEND__STATIC__BEARER_TOKEN": "your-token",
-        "MCP__AUTH__BACKEND__STATIC__BEARER_TOKEN_FILE": "/path/to/fallback/.credentials"
+        "MCP__UPSTREAM__DEFAULT__ENDPOINT": "https://api.example.com",
+        "MCP__UPSTREAM__DEFAULT__AUTH__STATIC__WEB_TOKEN": "your-token",
+        "MCP__UPSTREAM__DEFAULT__AUTH__STATIC__WEB_TOKEN_FILE": "/path/to/fallback/.credentials"
       },
       "enabled": true
     }
@@ -259,9 +259,9 @@ Pipeline kinds: `call`, `jq`, `foreach`, `emit`, `return`.
       "command": "/path/to/sonatypeiq-mcp",
       "args": ["--transport", "stdio"],
       "env": {
-        "MCP__UPSTREAM__ENDPOINT": "https://api.example.com",
-        "MCP__AUTH__BACKEND__STATIC__BEARER_TOKEN": "your-token",
-        "MCP__AUTH__BACKEND__STATIC__BEARER_TOKEN_FILE": "/path/to/fallback/.credentials"
+        "MCP__UPSTREAM__DEFAULT__ENDPOINT": "https://api.example.com",
+        "MCP__UPSTREAM__DEFAULT__AUTH__STATIC__WEB_TOKEN": "your-token",
+        "MCP__UPSTREAM__DEFAULT__AUTH__STATIC__WEB_TOKEN_FILE": "/path/to/fallback/.credentials"
       }
     }
   }
@@ -275,7 +275,7 @@ Pipeline kinds: `call`, `jq`, `foreach`, `emit`, `return`.
 ```toml
 [mcp_servers.sonatypeiq-mcp]
 url = "http://localhost:8080/mcp"
-bearer_token_env_var = "MCP__AUTH__BACKEND__STATIC__BEARER_TOKEN"
+web_token_env_var = "MCP__UPSTREAM__DEFAULT__AUTH__STATIC__WEB_TOKEN"
 ```
 
 ### Cursor
@@ -289,9 +289,9 @@ bearer_token_env_var = "MCP__AUTH__BACKEND__STATIC__BEARER_TOKEN"
       "command": "/path/to/sonatypeiq-mcp",
       "args": ["--transport", "stdio"],
       "env": {
-        "MCP__UPSTREAM__ENDPOINT": "https://api.example.com",
-        "MCP__AUTH__BACKEND__STATIC__BEARER_TOKEN": "your-token",
-        "MCP__AUTH__BACKEND__STATIC__BEARER_TOKEN_FILE": "/path/to/fallback/.credentials"
+        "MCP__UPSTREAM__DEFAULT__ENDPOINT": "https://api.example.com",
+        "MCP__UPSTREAM__DEFAULT__AUTH__STATIC__WEB_TOKEN": "your-token",
+        "MCP__UPSTREAM__DEFAULT__AUTH__STATIC__WEB_TOKEN_FILE": "/path/to/fallback/.credentials"
       }
     }
   }
@@ -309,9 +309,9 @@ bearer_token_env_var = "MCP__AUTH__BACKEND__STATIC__BEARER_TOKEN"
       "type": "remote",
       "url": "http://localhost:8080/mcp",
       "env": {
-        "MCP__UPSTREAM__ENDPOINT": "https://api.example.com",
-        "MCP__AUTH__BACKEND__STATIC__BEARER_TOKEN": "your-token",
-        "MCP__AUTH__BACKEND__STATIC__BEARER_TOKEN_FILE": "/path/to/fallback/.credentials"
+        "MCP__UPSTREAM__DEFAULT__ENDPOINT": "https://api.example.com",
+        "MCP__UPSTREAM__DEFAULT__AUTH__STATIC__WEB_TOKEN": "your-token",
+        "MCP__UPSTREAM__DEFAULT__AUTH__STATIC__WEB_TOKEN_FILE": "/path/to/fallback/.credentials"
       }
     }
   }
@@ -328,9 +328,9 @@ bearer_token_env_var = "MCP__AUTH__BACKEND__STATIC__BEARER_TOKEN"
     "sonatypeiq-mcp": {
       "url": "http://localhost:8080/mcp",
       "env": {
-        "MCP__UPSTREAM__ENDPOINT": "https://api.example.com",
-        "MCP__AUTH__BACKEND__STATIC__BEARER_TOKEN": "your-token",
-        "MCP__AUTH__BACKEND__STATIC__BEARER_TOKEN_FILE": "/path/to/fallback/.credentials"
+        "MCP__UPSTREAM__DEFAULT__ENDPOINT": "https://api.example.com",
+        "MCP__UPSTREAM__DEFAULT__AUTH__STATIC__WEB_TOKEN": "your-token",
+        "MCP__UPSTREAM__DEFAULT__AUTH__STATIC__WEB_TOKEN_FILE": "/path/to/fallback/.credentials"
       }
     }
   }
@@ -344,7 +344,7 @@ bearer_token_env_var = "MCP__AUTH__BACKEND__STATIC__BEARER_TOKEN"
 ```toml
 [mcp_servers.sonatypeiq-mcp]
 url = "http://localhost:8080/mcp"
-bearer_token_env_var = "MCP__AUTH__BACKEND__STATIC__BEARER_TOKEN"
+web_token_env_var = "MCP__UPSTREAM__DEFAULT__AUTH__STATIC__WEB_TOKEN"
 ```
 
 ### Cursor (Remote)
@@ -390,28 +390,28 @@ First generate a default config, then mount it when running:
   docker run --rm ghcr.io/<YOUR_ORG>/sonatypeiq-mcp:latest --print-default-config > ~/.sonatypeiq-mcp/config.yaml
 ```
 
-- **Static bearer token**
+- **Static web token**
 
 ```sh
   docker run -d --name sonatypeiq-mcp \
     -p 8080:8080 -p 9991:9991 \
-    -e MCP__UPSTREAM__ENDPOINT="https://api.example.com" \
-    -e MCP__AUTH__BACKEND__STATIC__BEARER_TOKEN="YOUR_BEARER_TOKEN" \
+    -e MCP__UPSTREAM__DEFAULT__ENDPOINT="https://api.example.com" \
+    -e MCP__UPSTREAM__DEFAULT__AUTH__STATIC__WEB_TOKEN="YOUR_WEB_TOKEN" \
     -v ~/.sonatypeiq-mcp:/home/mcp/.sonatypeiq-mcp \
     ghcr.io/<YOUR_ORG>/sonatypeiq-mcp:latest \
     --transport http --port 8080
   ```
 
-- **OIDC backend auth**
+- **OIDC upstream auth**
 
 ```sh
   docker run -d --name sonatypeiq-mcp \
     -p 8080:8080 -p 9991:9991 \
-    -e MCP__UPSTREAM__ENDPOINT="https://api.example.com" \
-    -e MCP__AUTH__BACKEND__OIDC__ENABLED=true \
-    -e MCP__AUTH__BACKEND__OIDC__ISSUER="https://idp.example.com/realms/myrealm" \
-    -e MCP__AUTH__BACKEND__OIDC__CLIENT_ID="my-client" \
-    -e MCP__AUTH__BACKEND__OIDC__CLIENT_SECRET="YOUR_CLIENT_SECRET" \
+    -e MCP__UPSTREAM__DEFAULT__ENDPOINT="https://api.example.com" \
+    -e MCP__UPSTREAM__DEFAULT__AUTH__OIDC__ENABLED=true \
+    -e MCP__UPSTREAM__DEFAULT__AUTH__OIDC__ISSUER="https://idp.example.com/realms/myrealm" \
+    -e MCP__UPSTREAM__DEFAULT__AUTH__OIDC__CLIENT_ID="my-client" \
+    -e MCP__UPSTREAM__DEFAULT__AUTH__OIDC__CLIENT_SECRET="YOUR_CLIENT_SECRET" \
     -v ~/.sonatypeiq-mcp:/home/mcp/.sonatypeiq-mcp \
     ghcr.io/<YOUR_ORG>/sonatypeiq-mcp:latest \
     --transport http --port 8080
@@ -421,8 +421,8 @@ First generate a default config, then mount it when running:
 
 After the container starts, use the bundled `mcpclient.sh` to verify.
 
-> **Note:** `mcpclient.sh` only supports **backend static** token auth. If the server requires
-> **frontend OIDC** authentication, use a real AI-agent MCP client instead.
+> **Note:** `mcpclient.sh` only supports **upstream static** token auth. If the server requires
+> **server OIDC** authentication, use a real AI-agent MCP client instead.
 
 ```sh
 # Point to the mapped host port (include /mcp path)
@@ -445,15 +445,15 @@ First generate a default config, then mount it when running:
   docker run --rm ghcr.io/<YOUR_ORG>/sonatypeiq-mcp:latest --print-default-config > ~/.sonatypeiq-mcp/config.yaml
 ```
 
-- **Static bearer token**
+- **Static web token**
 
 ```sh
   helm upgrade -i sonatypeiq-mcp deploy/helm \
     --set image.repository=ghcr.io/<YOUR_ORG>/sonatypeiq-mcp \
     --set image.tag=latest \
     --set secret.static.create=true \
-    --set secret.static.bearerToken="YOUR_BEARER_TOKEN" \
-    --set config.upstream.endpoint="https://api.example.com"
+    --set secret.static.webToken="YOUR_WEB_TOKEN" \
+    --set config.upstream.default.endpoint="https://api.example.com"
   ```
 
 - **OIDC authentication**
@@ -464,10 +464,10 @@ First generate a default config, then mount it when running:
     --set image.tag=latest \
     --set secret.static.create=true \
     --set secret.static.oidcClientSecret="YOUR_OIDC_CLIENT_SECRET" \
-    --set config.auth.backend.oidc.enabled=true \
-    --set config.auth.backend.oidc.issuer="https://idp.example.com" \
-    --set config.auth.backend.oidc.clientId="my-client" \
-    --set config.upstream.endpoint="https://api.example.com"
+    --set config.upstream.default.auth.oidc.enabled=true \
+    --set config.upstream.default.auth.oidc.issuer="https://idp.example.com" \
+    --set config.upstream.default.auth.oidc.clientId="my-client" \
+    --set config.upstream.default.endpoint="https://api.example.com"
   ```
 
 See `deploy/helm/values.yaml` for all configurable parameters.
@@ -488,7 +488,7 @@ We welcome contributions! Here's how you can help:
 git clone https://github.com/<YOUR_ORG>/sonatypeiq-mcp.git
 cd sonatypeiq-mcp
 make build
-make test
+make test-ut
 ```
 
 ### Code Style
@@ -507,8 +507,8 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 
 For questions, suggestions, or support:
 
-- **GitHub Issues**: [Create an issue](../../sonatypeiq-mcp/issues)
-- **Discussions**: [Start a discussion](../../sonatypeiq-mcp/discussions)
+- **GitHub Issues**: [Create an issue](../../issues)
+- **Discussions**: [Start a discussion](../../discussions)
 - **Email**: <jameswong1376@gmail.com>
 
 ## Acknowledgments
