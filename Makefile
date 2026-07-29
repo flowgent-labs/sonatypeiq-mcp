@@ -33,11 +33,10 @@ help:
 	@echo ""
 
 build: go.sum
-	GOPROXY=$(GOPROXY) GOOS=$(GOOS) GOARCH=$(GOARCH) go mod tidy && go build $(BUILD_FLAGS) -o $(BIN) .
+	GOPROXY=$(GOPROXY) GOOS=$(GOOS) GOARCH=$(GOARCH) go build $(BUILD_FLAGS) -o $(BIN) .
 	@ln -sf $(notdir $(BIN)) bin/$(BINARY_NAME)
 
-build-all: go.sum
-	GOPROXY=$(GOPROXY) go mod tidy
+build-all:
 	GOPROXY=$(GOPROXY) GOOS=linux   GOARCH=amd64 go build $(BUILD_FLAGS) -o bin/$(BINARY_NAME)-linux-amd64-$(VERSION)   .
 	GOPROXY=$(GOPROXY) GOOS=linux   GOARCH=arm64 go build $(BUILD_FLAGS) -o bin/$(BINARY_NAME)-linux-arm64-$(VERSION)   .
 	GOPROXY=$(GOPROXY) GOOS=darwin  GOARCH=amd64 go build $(BUILD_FLAGS) -o bin/$(BINARY_NAME)-darwin-amd64-$(VERSION)  .
