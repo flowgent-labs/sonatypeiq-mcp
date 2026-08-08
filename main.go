@@ -142,6 +142,9 @@ func printDefaultConfigYAML() {
 	fmt.Println("# Resource Server role per RFC 9728 / MCP Authorization spec.")
 	fmt.Println("# Only enforced on the http transport; stdio has no network boundary.")
 	fmt.Println("server:")
+	fmt.Println("  # Override the default service name (derived from the binary name).")
+	fmt.Println("  # Affects filesystem paths and OpenTelemetry service.name.")
+	fmt.Println("  # service_name: \"sonatypeiq-mcp\"")
 	fmt.Println("  # HTTP server timeouts in seconds. 0 = disabled.")
 	fmt.Println("  # write_timeout_seconds must be 0 for SSE (Streamable HTTP) transport.")
 	fmt.Println("  read_timeout_seconds: 30")
@@ -166,7 +169,7 @@ func printDefaultConfigYAML() {
 	fmt.Println("  # JSON-RPC 2.0 control plane at /mcp.")
 	fmt.Println("  # Upload:   POST /_/ifs/upload/{yyyyMMdd}/{uuid}.{suffix}")
 	fmt.Println("  # Download: GET  /_/ifs/download/{yyyyMMdd}/{uuid}.{suffix}")
-	fmt.Println("  # Files stored under ~/." + "sonatypeiq-mcp" + "/{download,upload}/ifs/{yyyyMMdd}/")
+	fmt.Println("  # Files stored under ~/." + "sonatypeiq-mcp" + "/ifs/{download,upload}/{yyyyMMdd}/")
 	fmt.Println("  # with UUID-based filenames to prevent collisions.")
 	fmt.Println("  ifs:")
 	fmt.Println("    enabled: true")
@@ -265,7 +268,7 @@ func main() {
 		return
 	}
 
-	// Load config from $HOME/.{binaryName}/config.yaml with MCP__ env overrides
+	// Load config from $HOME/.{serviceName}/config.yaml with MCP__ env overrides
 	cfg, err := mcputils.LoadConfig("sonatypeiq-mcp")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: config load failed: %v\n", err)
