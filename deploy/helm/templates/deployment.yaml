@@ -45,6 +45,8 @@ spec:
               containerPort: {{ .Values.service.mgmtPort }}
               protocol: TCP
           env:
+            - name: HOME
+              value: "/home/mcp"
             - name: MCP__UPSTREAM__DEFAULT__ENDPOINT
               value: {{ .Values.config.upstream.default.endpoint | quote }}
             {{- if .Values.config.server.auth.oidc.enabled }}
@@ -117,12 +119,8 @@ spec:
                   key: cookie_token
             {{- end }}
             {{- end }}
-            - name: MCP__RUNTIME__LOG_AUTHORIZATION
-              value: {{ .Values.config.runtime.logAuthorization | quote }}
-            {{- if .Values.config.runtime.downloadDir }}
-            - name: MCP__RUNTIME__DOWNLOAD_DIR
-              value: {{ .Values.config.runtime.downloadDir | quote }}
-            {{- end }}
+            - name: MCP__LOGGING__AUTH_VERBOSE
+              value: {{ .Values.config.logging.auth_verbose | quote }}
           {{- if .Values.config.mgmt.otel.enabled }}
             - name: MCP__MGMT__OTEL__ENABLED
               value: "true"
@@ -147,7 +145,7 @@ spec:
             periodSeconds: 10
           volumeMounts:
             - name: config
-              mountPath: /home/mcp/config.yaml
+              mountPath: /home/mcp/.sonatypeiq-mcp/config.yaml
               subPath: config.yaml
             {{- if eq .Values.secret.provider "gcp" }}
             - name: secrets
