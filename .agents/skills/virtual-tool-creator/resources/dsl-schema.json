@@ -555,6 +555,9 @@
         "client_secret": {
           "type": "string"
         },
+        "client_secret_file": {
+          "type": "string"
+        },
         "enabled": {
           "type": "boolean"
         },

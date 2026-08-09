@@ -210,7 +210,7 @@ func NewMCPServer() (*server.MCPServer, error) {
 	}
 
 	// Register virtual tools from config
-	aggConfigPath := mcputils.VirtualConfigPath("sonatypeiq-mcp")
+	aggConfigPath := mcputils.VirtualConfigPath()
 	aggEngine, err := engine.New(aggConfigPath, &registryAdapter{}, &mcputils.NamedUpstreamHTTPClient{})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to load virtual tools: %v\n", err)

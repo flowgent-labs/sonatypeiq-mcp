@@ -142,6 +142,8 @@ func printDefaultConfigYAML() {
 	fmt.Println("# Resource Server role per RFC 9728 / MCP Authorization spec.")
 	fmt.Println("# Only enforced on the http transport; stdio has no network boundary.")
 	fmt.Println("server:")
+	fmt.Println("  # The MCP server name is determined by MCP__SERVER__NAME env var,")
+	fmt.Println("  # or defaults to the binary name 'sonatypeiq-mcp'.")
 	fmt.Println("  # HTTP server timeouts in seconds. 0 = disabled.")
 	fmt.Println("  # write_timeout_seconds must be 0 for SSE (Streamable HTTP) transport.")
 	fmt.Println("  read_timeout_seconds: 30")
@@ -166,7 +168,7 @@ func printDefaultConfigYAML() {
 	fmt.Println("  # JSON-RPC 2.0 control plane at /mcp.")
 	fmt.Println("  # Upload:   POST /_/ifs/upload/{yyyyMMdd}/{uuid}.{suffix}")
 	fmt.Println("  # Download: GET  /_/ifs/download/{yyyyMMdd}/{uuid}.{suffix}")
-	fmt.Println("  # Files stored under ~/." + "sonatypeiq-mcp" + "/{download,upload}/ifs/{yyyyMMdd}/")
+	fmt.Println("  # Files stored under ~/." + "sonatypeiq-mcp" + "/ifs/{download,upload}/{yyyyMMdd}/")
 	fmt.Println("  # with UUID-based filenames to prevent collisions.")
 	fmt.Println("  ifs:")
 	fmt.Println("    enabled: true")
@@ -216,8 +218,12 @@ func printDefaultConfigYAML() {
 	fmt.Println("        issuer: \"\"            # e.g. https://keycloak.example.com/realms/myrealm")
 	fmt.Println("        client_id: \"\"")
 	fmt.Println("        client_secret: \"\"")
+	fmt.Println("        client_secret_file: \"\" # path to file containing OIDC client secret (K8s secrets)")
 	fmt.Println("        scopes: \"openid\"       # space-separated scope list")
+	fmt.Println("        grant_type: \"\"         # empty = client_credentials; set password for password grant")
 	fmt.Println("        token_url: \"\"          # optional override (auto-discovered from issuer if empty)")
+	fmt.Println("        username: \"\"           # only used when grant_type=password")
+	fmt.Println("        password: \"\"           # only used when grant_type=password")
 	fmt.Println()
 	fmt.Println("      # Static credentials for legacy / simple APIs")
 	fmt.Println("      static:")
@@ -265,7 +271,7 @@ func main() {
 		return
 	}
 
-	// Load config from $HOME/.{binaryName}/config.yaml with MCP__ env overrides
+	// Load config from $HOME/.{serviceName}/config.yaml with MCP__ env overrides
 	cfg, err := mcputils.LoadConfig("sonatypeiq-mcp")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: config load failed: %v\n", err)
