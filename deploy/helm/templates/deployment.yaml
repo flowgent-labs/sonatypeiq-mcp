@@ -111,7 +111,7 @@ spec:
             {{- end }}
             {{- if .Values.persistence.enabled }}
             - name: data
-              mountPath: /home/mcp/.sonatypeiq-mcp/ifs
+              mountPath: /home/mcp/.sonatypeiq-mcp/tfs
             {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
