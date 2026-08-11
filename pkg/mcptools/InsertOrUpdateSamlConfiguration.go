@@ -32,10 +32,9 @@ func InsertOrUpdateSamlConfigurationHandler(ctx context.Context, request mcp.Cal
 	if args == nil {
 		args = make(map[string]interface{})
 	}
-	// FileRef: collect file URIs (including empty ones so optional files
-	// produce empty parts). Always build a proper upstream request — even
-	// when all file arguments are empty — to avoid "missing boundary"
-	// errors on upstream services (e.g. Spring Boot).
+	// FileRef: collect file URI values. Optional files that are not provided
+	// are omitted from the multipart body. Non-URI values remain available for
+	// anyOf binary|string multipart schemas and are forwarded as text fields.
 	fileRefs := map[string]string{
 		"identityProviderXml": "",
 	}
@@ -47,5 +46,5 @@ func InsertOrUpdateSamlConfigurationHandler(ctx context.Context, request mcp.Cal
 		uri = strings.TrimPrefix(uri, "@")
 		fileRefs["identityProviderXml"] = uri
 	}
-	return mcputils.ForwardMultipartRequest(ctx, upstream, "PUT", "/api/v2/config/saml", args, fileRefs, []string{}, "InsertOrUpdateSamlConfiguration")
+	return mcputils.ForwardMultipartRequest(ctx, upstream, "PUT", "/api/v2/config/saml", args, fileRefs, []string{}, []string{}, map[string]string{}, "InsertOrUpdateSamlConfiguration")
 }
