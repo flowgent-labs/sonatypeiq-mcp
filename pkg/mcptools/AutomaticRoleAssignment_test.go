@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
-	mcputils "sonatypeiq-mcp/pkg/helpers"
 )
 
 func TestNewAutomaticRoleAssignmentMCPTool(t *testing.T) {
@@ -48,7 +47,7 @@ func TestAutomaticRoleAssignmentHandler(t *testing.T) {
 		defer ts.Close()
 
 		t.Setenv("MCP__UPSTREAM__DEFAULT__ENDPOINT", ts.URL)
-		mcputils.LoadConfig("sonatypeiq-mcp")
+		installTestConfig(t, "sonatypeiq-mcp")
 
 		req := mcp.CallToolRequest{
 			Params: mcp.CallToolParams{
@@ -74,7 +73,7 @@ func TestAutomaticRoleAssignmentHandler(t *testing.T) {
 		defer ts.Close()
 
 		t.Setenv("MCP__UPSTREAM__DEFAULT__ENDPOINT", ts.URL)
-		mcputils.LoadConfig("sonatypeiq-mcp")
+		installTestConfig(t, "sonatypeiq-mcp")
 
 		req := mcp.CallToolRequest{
 			Params: mcp.CallToolParams{
@@ -98,7 +97,7 @@ func TestAutomaticRoleAssignmentHandler(t *testing.T) {
 		defer ts.Close()
 
 		t.Setenv("MCP__UPSTREAM__DEFAULT__ENDPOINT", ts.URL)
-		mcputils.LoadConfig("sonatypeiq-mcp")
+		installTestConfig(t, "sonatypeiq-mcp")
 
 		req := mcp.CallToolRequest{
 			Params: mcp.CallToolParams{
